@@ -6,7 +6,6 @@ import SideNav from './components/SideNav';
 import UserView from './components/UserView';
 
 import { ThemeProvider } from './contexts/ThemeContext';
-import MonthYearPicker from './components/MonthYearPicker';
 import KidProfile from "./pages/KidProfile";
 
 // Define interfaces for data structures
@@ -80,8 +79,6 @@ function App() {
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
-
-    const years = Array.from({ length: 10 }, (_, i) => selectedDate.getFullYear() - 5 + i);
 
     // Calendar helper functions
     const getDaysInMonth = (date: Date) => {
@@ -231,7 +228,7 @@ function App() {
         setNewTask('');
     }, [selectedDate, newTask, selectedAssignee, dueTime, recurrenceType, recurrenceCount, isEditing, editingTaskId]);
 
-    const handleDeleteTask = (dateString: string, taskId: string) => {
+    const handleDeleteTask = (taskId: string) => {
         setTasks(prevTasks => {
             const newTasks = { ...prevTasks };
             // Find and remove the task from the correct date
@@ -270,14 +267,6 @@ function App() {
     // Handle month navigation in calendar
     const changeMonth = (offset: number) => {
         setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + offset, 1));
-    };
-
-    const handleMonthChange = (month: number) => {
-        setSelectedDate(new Date(selectedDate.getFullYear(), month, 1));
-    };
-
-    const handleYearChange = (year: number) => {
-        setSelectedDate(new Date(year, selectedDate.getMonth(), 1));
     };
 
     // Render task indicator dots on calendar
@@ -416,28 +405,6 @@ function App() {
             } catch (error) {
                 console.error('Error scheduling notification:', error);
             }
-        }
-    };
-
-    // Send SMS notification using Twilio
-    const sendSMSNotification = async (task: Task) => {
-        try {
-            const response = await fetch('/api/send-sms', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    phone: task.assigneePhone,
-                    message: `Reminder: Task "${task.text}" is due on ${task.dueDate} at ${task.dueTime}`,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to send SMS notification');
-            }
-        } catch (error) {
-            console.error('Error sending SMS:', error);
         }
     };
 
@@ -599,7 +566,7 @@ function App() {
                             <p>Are you sure you want to delete this task?</p>
                             <div className="delete-confirmation-buttons">
                                 <button
-                                    onClick={() => handleDeleteTask('', deleteConfirmation.taskId)}
+                                    onClick={() => handleDeleteTask(deleteConfirmation.taskId)}
                                     className="task-button task-button-danger"
                                 >
                                     Delete
@@ -634,7 +601,6 @@ function App() {
                                 <UserView 
                                     tasks={tasks}
                                     selectedDate={selectedDate}
-                                    TEAM_MEMBERS={TEAM_MEMBERS}
                                     onChangeMonth={changeMonth}
                                     closedTasks={closedTasks}
                                     onToggleTaskCompletion={toggleTaskCompletion}

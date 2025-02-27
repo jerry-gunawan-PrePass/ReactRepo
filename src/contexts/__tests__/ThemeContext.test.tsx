@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, act } from '@testing-library/react';
 import { ThemeProvider, useTheme } from '../ThemeContext';
 
@@ -8,7 +7,7 @@ const localStorageMock = {
     setItem: jest.fn(),
     clear: jest.fn()
 };
-global.localStorage = localStorageMock as any;
+global.localStorage = localStorageMock as unknown as Storage;
 
 // Mock matchMedia
 global.matchMedia = jest.fn().mockImplementation(query => ({
@@ -20,7 +19,7 @@ global.matchMedia = jest.fn().mockImplementation(query => ({
     addEventListener: jest.fn(),
     removeEventListener: jest.fn(),
     dispatchEvent: jest.fn(),
-}));
+})) as unknown as (query: string) => MediaQueryList;
 
 // Test component that uses the theme context
 const TestComponent = () => {
@@ -43,8 +42,8 @@ describe('ThemeContext', () => {
     });
 
     it('provides default light theme when no preference is saved', () => {
-        localStorage.getItem.mockReturnValue(null);
-        global.matchMedia.mockImplementation(() => ({ matches: false }));
+        (localStorage.getItem as jest.Mock).mockReturnValue(null);
+        (global.matchMedia as jest.Mock).mockImplementation(() => ({ matches: false }));
 
         const { getByTestId } = render(
             <ThemeProvider>
@@ -56,8 +55,8 @@ describe('ThemeContext', () => {
     });
 
     it('provides dark theme when system prefers dark mode', () => {
-        localStorage.getItem.mockReturnValue(null);
-        global.matchMedia.mockImplementation(() => ({ matches: true }));
+        (localStorage.getItem as jest.Mock).mockReturnValue(null);
+        (global.matchMedia as jest.Mock).mockImplementation(() => ({ matches: true }));
 
         const { getByTestId } = render(
             <ThemeProvider>
@@ -69,7 +68,7 @@ describe('ThemeContext', () => {
     });
 
     it('uses theme from localStorage if available', () => {
-        localStorage.getItem.mockReturnValue('dark');
+        (localStorage.getItem as jest.Mock).mockReturnValue('dark');
 
         const { getByTestId } = render(
             <ThemeProvider>
@@ -81,7 +80,7 @@ describe('ThemeContext', () => {
     });
 
     it('toggles theme correctly', () => {
-        localStorage.getItem.mockReturnValue('light');
+        (localStorage.getItem as jest.Mock).mockReturnValue('light');
 
         const { getByTestId } = render(
             <ThemeProvider>
