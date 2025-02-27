@@ -4,6 +4,9 @@ import './assets/calendar.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import SideNav from './components/SideNav';
 import UserView from './components/UserView';
+
+import { ThemeProvider } from './contexts/ThemeContext';
+import MonthYearPicker from './components/MonthYearPicker';
 import KidProfile from "./pages/KidProfile";
 
 // Define interfaces for data structures
@@ -69,6 +72,9 @@ function App() {
         taskId: string;
         dateString: string;
     } | null>(null);
+
+    // Add state for closed tasks
+    const [closedTasks, setClosedTasks] = useState<Record<string, boolean>>({});
 
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
@@ -266,6 +272,14 @@ function App() {
         setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + offset, 1));
     };
 
+    const handleMonthChange = (month: number) => {
+        setSelectedDate(new Date(selectedDate.getFullYear(), month, 1));
+    };
+
+    const handleYearChange = (year: number) => {
+        setSelectedDate(new Date(year, selectedDate.getMonth(), 1));
+    };
+
     // Render task indicator dots on calendar
     const renderTaskDots = (day: number) => {
         // Convert calendar day to ISO date string for comparison
@@ -332,6 +346,14 @@ function App() {
     // Show confirmation dialog before deleting a task
     const showDeleteConfirmation = (dateString: string, taskId: string) => {
         setDeleteConfirmation({ show: true, taskId, dateString });
+    };
+
+    // Add function to toggle closed state
+    const toggleTaskClosed = (taskId: string) => {
+        setClosedTasks(prev => ({
+            ...prev,
+            [taskId]: !prev[taskId]
+        }));
     };
 
     // Initialize notifications when component mounts
@@ -422,6 +444,7 @@ function App() {
     // Admin view component with full task management capabilities
     const adminView = (
         <div className="max-w-6xl mx-auto">
+            <h1 className="text-3xl font-bold mb-6 text-center">Taskboard</h1>
             <div className="calendar-container">
                 <div className="calendar-header">
                     <button onClick={() => changeMonth(-1)} className="calendar-nav-button">&lt;</button>
@@ -509,22 +532,40 @@ function App() {
                     {getTasksForSelectedDate(selectedDate).map((task) => (
                         <div 
                             key={task.id} 
-                            className={`task-item ${task.completed ? 'completed' : ''} ${isTaskOverdue(task) ? 'overdue' : ''}`}
+                            className={`task-item 
+                                ${closedTasks[task.id] ? 'completed' : ''} 
+                                ${task.completed && !closedTasks[task.id] ? 'user-completed' : ''} 
+                                ${isTaskOverdue(task) ? 'overdue' : ''}`
+                            }
                             style={{ borderLeftColor: task.color }}
                         >
                             <div className="task-item-content">
                                 <div className="task-main">
                                     <div className="task-header-row">
-                                        <input
-                                            type="checkbox"
-                                            checked={task.completed}
-                                            onChange={() => toggleTaskCompletion(task.id)}
-                                            className="task-checkbox"
-                                        />
-                                        <p className={`task-text ${task.completed ? 'completed-text' : ''}`}>
-                                            {task.text}
-                                        </p>
+                                        <div className="task-checkboxes">
+                                            <label className="checkbox-label">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={task.completed}
+                                                    onChange={() => toggleTaskCompletion(task.id)}
+                                                    className="task-checkbox"
+                                                />
+                                                Complete
+                                            </label>
+                                            <label className="checkbox-label">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={closedTasks[task.id] || false}
+                                                    onChange={() => toggleTaskClosed(task.id)}
+                                                    className="task-checkbox"
+                                                />
+                                                Closed
+                                            </label>
+                                        </div>
                                     </div>
+                                    <p className={`task-text ${task.completed ? 'completed-text' : ''} font-bold text-lg mt-2`}>
+                                        {task.text}
+                                    </p>
                                     <p className="task-meta">
                                         <span className="task-assignee">
                                             Assigned to: {task.assignedTo}
@@ -579,6 +620,26 @@ function App() {
 
     // Main app structure with routing
     return (
+        <ThemeProvider>
+            <Router>
+                <div className="app-container">
+                    <SideNav />
+                    <div className="main-content">
+                        <Routes>
+                            <Route path="/admin" element={adminView} />
+                            <Route path="/user" element={
+                                <UserView 
+                                    tasks={tasks}
+                                    selectedDate={selectedDate}
+                                    TEAM_MEMBERS={TEAM_MEMBERS}
+                                    onChangeMonth={changeMonth}
+                                    closedTasks={closedTasks}
+                                    onToggleTaskCompletion={toggleTaskCompletion}
+                                />
+                            } />
+                            <Route path="/" element={<Navigate to="/admin" />} />
+                        </Routes>
+                    </div>
         <Router>
             <div className="app-container">
                 <SideNav />
@@ -603,8 +664,8 @@ function App() {
                         <Route path="/" element={<Navigate to="/admin" />} />
                     </Routes>
                 </div>
-            </div>
-        </Router>
+            </Router>
+        </ThemeProvider>
     );
 }
 
