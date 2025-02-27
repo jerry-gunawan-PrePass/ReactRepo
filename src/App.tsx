@@ -22,7 +22,7 @@ interface TeamMember {
 // Predefined team members with their contact info and colors
 const TEAM_MEMBERS: TeamMember[] = [
     { name: 'Jerry', phone: '+1234567890', color: '#FF6B6B' },
-    { name: 'Mike', phone: '6232398834@tmomail.net', color: '#4ECDC4' },
+    { name: 'Mike', phone: '+1234567891', color: '#4ECDC4' },
     { name: 'Abe', phone: '+1234567892', color: '#45B7D1' },
     { name: 'Rick', phone: '+1234567893', color: '#96CEB4' }
 ];
@@ -98,8 +98,10 @@ function App() {
 
     // Replace TEAM_MEMBERS with kids from Supabase
     const [kids, setKids] = useState<Kid[]>([]);
-    // Add state for chores
+    
+    // Keep the local state for chores
     const [chores, setChores] = useState<Chore[]>([]);
+    
     // Add state for selected chore
     const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
     
@@ -174,6 +176,34 @@ function App() {
         return dates;
     };
 
+    // Function to fetch chores that can be called from child components
+    const fetchChores = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('chores')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error fetching chores:', error);
+                return;
+            }
+            
+            setChores(data || []);
+            console.log('Chores loaded:', data);
+            
+            // Reset selectedChore if it no longer exists in the updated chores list
+            if (selectedChore) {
+                const choreStillExists = data?.some(chore => chore.id === selectedChore.id);
+                if (!choreStillExists) {
+                    setSelectedChore(null);
+                }
+            }
+        } catch (err) {
+            console.error('Error in fetchChores:', err);
+        }
+    };
+
     // Fetch kids and chores from Supabase
     useEffect(() => {
         async function fetchData() {
@@ -196,19 +226,8 @@ function App() {
                 }
             }
             
-            // Fetch chores - log the response to debug
-            const choresResponse = await supabase
-                .from('chores')
-                .select('*');
-            
-            console.log('Chores response:', choresResponse);
-            
-            if (choresResponse.error) {
-                console.error('Error fetching chores:', choresResponse.error);
-            } else if (choresResponse.data) {
-                setChores(choresResponse.data);
-                console.log('Chores loaded:', choresResponse.data);
-            }
+            // Fetch chores
+            await fetchChores();
         }
         
         fetchData();
@@ -381,7 +400,7 @@ function App() {
                     const dateString = startDate.toDateString();
                     const task: Task = {
                         ...baseTask,
-                        id: uuidv4(),
+            id: uuidv4(),
                         dueDate: formattedDate
                     };
 
@@ -401,6 +420,76 @@ function App() {
     }, [selectedDate, selectedChore, selectedKid, dueTime, recurrenceType, recurrenceCount, isEditing, editingTaskId]);
 
     const handleDeleteTask = (_dateString: string, taskId: string) => {
+        // First find the task to get its details
+        let taskToDelete: Task | null = null;
+        
+        // Search through all tasks to find the one with matching ID
+        Object.values(tasks).flat().forEach(task => {
+            if (task.id === taskId) {
+                taskToDelete = task;
+            }
+        });
+        
+        if (taskToDelete) {
+            // Find the corresponding database entry and delete it
+            const deleteFromDatabase = async () => {
+                try {
+                    // Find the kid ID from the task's assignedTo field
+                    const kidName = taskToDelete?.assignedTo.split(' ');
+                    const firstName = kidName?.[0];
+                    const lastName = kidName?.[1];
+                    
+                    // Find the kid ID
+                    const { data: kidData } = await supabase
+                        .from('kids')
+                        .select('id')
+                        .eq('first_name', firstName)
+                        .eq('last_name', lastName)
+                        .single();
+                    
+                    if (!kidData) {
+                        console.error('Could not find kid:', firstName, lastName);
+                        return;
+                    }
+                    
+                    // Find the chore ID from the task's text
+                    const choreDescription = taskToDelete?.text.split(' (')[0]; // Remove any recurrence suffix
+                    
+                    const { data: choreData } = await supabase
+                        .from('chores')
+                        .select('id')
+                        .eq('description', choreDescription)
+                        .single();
+                    
+                    if (!choreData) {
+                        console.error('Could not find chore:', choreDescription);
+                        return;
+                    }
+                    
+                    // Delete the assignment from kids_chores table
+                    const { error } = await supabase
+                        .from('kids_chores')
+                        .delete()
+                        .eq('kid_id', kidData.id)
+                        .eq('chore_id', choreData.id)
+                        .eq('assigned_date', taskToDelete?.dueDate);
+                    
+                    if (error) {
+                        console.error('Error deleting task from database:', error);
+                        alert('Failed to delete task from database. Please try again.');
+                    } else {
+                        console.log('Successfully deleted task from database');
+                    }
+                } catch (err) {
+                    console.error('Error in deleteFromDatabase:', err);
+                }
+            };
+            
+            // Call the async function to delete from database
+            deleteFromDatabase();
+        }
+        
+        // Remove from state as before
         setTasks(prevTasks => {
             const newTasks = { ...prevTasks };
             // Find and remove the task from the correct date
@@ -413,6 +502,16 @@ function App() {
             });
             return newTasks;
         });
+        
+        // Also remove from closedTasks state if present
+        if (closedTasks[taskId]) {
+            setClosedTasks(prev => {
+                const newClosedTasks = { ...prev };
+                delete newClosedTasks[taskId];
+                return newClosedTasks;
+            });
+        }
+        
         setDeleteConfirmation(null);
     };
 
@@ -485,23 +584,98 @@ function App() {
 
     // Handle task completion toggling
     const toggleTaskCompletion = (taskId: string) => {
-        setTasks(prevTasks => {
-            const newTasks = { ...prevTasks };
-            // Search all dates for the task
-            for (const dateString in newTasks) {
-                const taskIndex = newTasks[dateString].findIndex(task => task.id === taskId);
-                if (taskIndex !== -1) {
-                    // Update task completion status
-                    newTasks[dateString] = [...newTasks[dateString]];
-                    newTasks[dateString][taskIndex] = {
-                        ...newTasks[dateString][taskIndex],
-                        completed: !newTasks[dateString][taskIndex].completed
-                    };
-                    break;
+        // Find the task to get its details
+        let taskToUpdate: Task | null = null;
+        let dateString: string | null = null;
+        
+        // Search through all tasks to find the one with matching ID
+        Object.entries(tasks).forEach(([date, taskList]) => {
+            taskList.forEach(task => {
+                if (task.id === taskId) {
+                    taskToUpdate = task;
+                    dateString = date;
                 }
-            }
-            return newTasks;
+            });
         });
+        
+        if (taskToUpdate && dateString) {
+            // Update the task in state
+            setTasks(prevTasks => {
+                const newTasks = { ...prevTasks };
+                const taskIndex = newTasks[dateString!].findIndex(task => task.id === taskId);
+                
+                if (taskIndex !== -1) {
+                    // Create a new array with the updated task
+                    newTasks[dateString!] = [...newTasks[dateString!]];
+                    const newCompletedStatus = !newTasks[dateString!][taskIndex].completed;
+                    
+                    newTasks[dateString!][taskIndex] = {
+                        ...newTasks[dateString!][taskIndex],
+                        completed: newCompletedStatus
+                    };
+                    
+                    // Update the task in the database
+                    if (taskToUpdate) {
+                        updateTaskCompletionInDatabase(taskToUpdate, newCompletedStatus);
+                    }
+                }
+                
+                return newTasks;
+            });
+        }
+    };
+    
+    // Update task completion status in the database
+    const updateTaskCompletionInDatabase = async (task: Task, completed: boolean) => {
+        try {
+            // Find the kid ID from the task's assignedTo field
+            const kidName = task.assignedTo.split(' ');
+            const firstName = kidName[0];
+            const lastName = kidName[1];
+            
+            // Find the kid ID
+            const { data: kidData } = await supabase
+                .from('kids')
+                .select('id')
+                .eq('first_name', firstName)
+                .eq('last_name', lastName)
+                .single();
+            
+            if (!kidData) {
+                console.error('Could not find kid:', firstName, lastName);
+                return;
+            }
+            
+            // Find the chore ID from the task's text
+            const choreDescription = task.text.split(' (')[0]; // Remove any recurrence suffix
+            
+            const { data: choreData } = await supabase
+                .from('chores')
+                .select('id')
+                .eq('description', choreDescription)
+                .single();
+            
+            if (!choreData) {
+                console.error('Could not find chore:', choreDescription);
+                return;
+            }
+            
+            // Update the assignment in kids_chores table
+            const { error } = await supabase
+                .from('kids_chores')
+                .update({ completed })
+                .eq('kid_id', kidData.id)
+                .eq('chore_id', choreData.id)
+                .eq('assigned_date', task.dueDate);
+            
+            if (error) {
+                console.error('Error updating task completion in database:', error);
+            } else {
+                console.log('Successfully updated task completion in database');
+            }
+        } catch (err) {
+            console.error('Error in updateTaskCompletionInDatabase:', err);
+        }
     };
 
     // Show confirmation dialog before deleting a task
@@ -629,7 +803,7 @@ function App() {
                     </select>
                     <div className="task-controls">
                         <div className="task-datetime-inputs">
-                            <input
+                                    <input
                                 type="time"
                                 className="task-time-input w-full"
                                 value={dueTime}
@@ -666,7 +840,7 @@ function App() {
                                 <option value="monthly">Monthly</option>
                             </select>
                             {(selectedChore?.frequency || recurrenceType !== '') && (
-                                <input
+                                    <input
                                     type="number"
                                     min="1"
                                     max="52"
@@ -676,14 +850,14 @@ function App() {
                                     placeholder="Times"
                                 />
                             )}
-                        </div>
-                        <button 
+                                </div>
+                                <button
                             type="submit" 
                             className="task-button task-button-primary"
                             disabled={!selectedChore || !selectedKid}
-                        >
+                                >
                             {isEditing ? 'Save' : 'Add'}
-                        </button>
+                                </button>
                     </div>
                 </form>
                 <div className="task-list">
@@ -730,7 +904,7 @@ function App() {
                                         </span>
                                         <span className="task-due">
                                             Due: {task.dueDate} at {task.dueTime}
-                                        </span>
+                                    </span>
                                     </p>
                                 </div>
                                 <div className="task-actions">
@@ -762,12 +936,12 @@ function App() {
                                 >
                                     Delete
                                 </button>
-                                <button
+                <button
                                     onClick={() => setDeleteConfirmation(null)}
                                     className="task-button task-button-secondary"
-                                >
+                >
                                     Cancel
-                                </button>
+                </button>
                             </div>
                         </div>
                     </div>
@@ -775,27 +949,6 @@ function App() {
             </div>
         </div>
     );
-
-    // Add this function near the top of your App component
-    const checkSupabaseConnection = async () => {
-        try {
-            const { data, error } = await supabase.from('kids').select('count');
-            if (error) {
-                console.error("Supabase connection error:", error);
-                return false;
-            }
-            console.log("Supabase connection successful:", data);
-            return true;
-        } catch (err) {
-            console.error("Supabase connection exception:", err);
-            return false;
-        }
-    };
-
-    // Call this in a useEffect
-    useEffect(() => {
-        checkSupabaseConnection();
-    }, []);
 
     // Main app structure with routing
     return (
@@ -816,6 +969,7 @@ function App() {
                                     onChangeMonth={changeMonth}
                                     closedTasks={closedTasks}
                                     onToggleTaskCompletion={toggleTaskCompletion}
+                                    onSelectDate={setSelectedDate}
                                 />
                             } />
                             
@@ -825,8 +979,8 @@ function App() {
                             {/* Kid profile route with ID parameter */}
                             <Route path="/kid/profile/:id" element={<KidProfile />} />
                             
-                            {/* Chores Manager route */}
-                            <Route path="/chores" element={<ChoresManager />} />
+                            {/* Chores Manager route - pass the fetchChores function */}
+                            <Route path="/chores" element={<ChoresManager onChoreAdded={fetchChores} />} />
                             
                             {/* Default route redirect */}
                             <Route path="/" element={<Navigate to="/admin" />} />
