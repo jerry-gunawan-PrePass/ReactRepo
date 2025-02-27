@@ -75,7 +75,7 @@ function App() {
     
     // Calendar navigation and task creation states
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [newTask, setNewTask] = useState('');
+    const [, setNewTask] = useState('');
     const [dueTime, setDueTime] = useState('12:00');
     
     // Task editing states
@@ -85,7 +85,7 @@ function App() {
     // Recurrence handling states
     const [recurrenceType, setRecurrenceType] = useState<RecurrencePattern['type'] | ''>('');
     const [recurrenceCount, setRecurrenceCount] = useState<number>(1);
-    const [selectedAssignee, setSelectedAssignee] = useState<TeamMember>(TEAM_MEMBERS[0]);
+    const [, setSelectedAssignee] = useState<TeamMember>(TEAM_MEMBERS[0]);
     const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>({ granted: false });
     const [deleteConfirmation, setDeleteConfirmation] = useState<{
         show: boolean;
@@ -757,7 +757,7 @@ function App() {
                             <p>Are you sure you want to delete this task?</p>
                             <div className="delete-confirmation-buttons">
                                 <button
-                                    onClick={() => handleDeleteTask(deleteConfirmation.taskId)}
+                                    onClick={() => handleDeleteTask(deleteConfirmation.dateString, deleteConfirmation.taskId)}
                                     className="task-button task-button-danger"
                                 >
                                     Delete
