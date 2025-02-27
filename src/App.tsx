@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import './assets/calendar.css';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import SideNav from './components/SideNav';
 import UserView from './components/UserView';
 
@@ -113,6 +113,29 @@ function App() {
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
 
+    // Add a state to track the current route
+    const [currentRoute, setCurrentRoute] = useState<string>('/admin');
+    
+    // Create a route observer component
+    const RouteObserver = () => {
+        const location = useLocation();
+        
+        useEffect(() => {
+            setCurrentRoute(location.pathname);
+        }, [location]);
+        
+        return null;
+    };
+    
+    // Refresh tasks when route changes to Admin or User views
+    useEffect(() => {
+        if (currentRoute === '/admin' || currentRoute === '/user') {
+            // Only refresh if kids data is already loaded
+            if (kids.length > 0) {
+                fetchAssignedChores(kids);
+            }
+        }
+    }, [currentRoute, kids]);
 
     // Calendar helper functions
     const getDaysInMonth = (date: Date) => {
@@ -224,14 +247,111 @@ function App() {
                 if (kidsWithColors.length > 0) {
                     setSelectedKid(kidsWithColors[0]);
                 }
+                
+                // Fetch chores
+                await fetchChores();
+                
+                // Fetch assigned chores from kids_chores table with colored kids
+                await fetchAssignedChores(kidsWithColors);
             }
-            
-            // Fetch chores
-            await fetchChores();
         }
         
         fetchData();
     }, []);
+
+    // Function to fetch assigned chores from kids_chores table
+    const fetchAssignedChores = async (kidsData: Kid[]) => {
+        try {
+            // Get all assigned chores with kid and chore details
+            const { data, error } = await supabase
+                .from('kids_chores')
+                .select(`
+                    id,
+                    kid_id,
+                    chore_id,
+                    assigned_date,
+                    completed
+                `);
+                
+            if (error) {
+                console.error('Error fetching assigned chores:', error);
+                return;
+            }
+            
+            if (!data || data.length === 0) {
+                console.log('No assigned chores found');
+                return;
+            }
+            
+            console.log('Assigned chores loaded:', data);
+            
+            // Create a map of kid IDs to kid objects for quick lookup
+            const kidMap = new Map<number, Kid>();
+            
+            // Ensure each kid has a color property
+            const kidsWithColors = kidsData.map((kid, index) => ({
+                ...kid,
+                color: kid.color || ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'][index % 4]
+            }));
+            
+            kidsWithColors.forEach(kid => kidMap.set(kid.id, kid));
+            
+            // Create a map of chore IDs to chore objects for quick lookup
+            const { data: choresData } = await supabase.from('chores').select('*');
+            const choreMap = new Map<number, Chore>();
+            if (choresData) {
+                choresData.forEach(chore => choreMap.set(chore.id, chore));
+            }
+            
+            // Convert assigned chores to tasks
+            const newTasks: Record<string, Task[]> = { ...tasks };
+            
+            for (const assignment of data) {
+                const kid = kidMap.get(assignment.kid_id);
+                const chore = choreMap.get(assignment.chore_id);
+                
+                if (!kid || !chore) {
+                    console.warn('Missing kid or chore data for assignment:', assignment);
+                    continue;
+                }
+                
+                const dateObj = new Date(assignment.assigned_date);
+                const dateString = dateObj.toDateString();
+                
+                const task: Task = {
+                    id: `${assignment.id}`,
+                    text: chore.description,
+                    timestamp: new Date(assignment.assigned_date).getTime(),
+                    assignedTo: `${kid.first_name} ${kid.last_name}`,
+                    assigneePhone: '',
+                    dueDate: assignment.assigned_date,
+                    dueTime: '12:00', // Default time if not specified
+                    color: kid.color,
+                    completed: assignment.completed
+                };
+                
+                if (!newTasks[dateString]) {
+                    newTasks[dateString] = [];
+                }
+                
+                // Check if this task already exists to avoid duplicates
+                const taskExists = newTasks[dateString].some(t => 
+                    t.text === task.text && 
+                    t.assignedTo === task.assignedTo && 
+                    t.dueDate === task.dueDate
+                );
+                
+                if (!taskExists) {
+                    newTasks[dateString].push(task);
+                }
+            }
+            
+            setTasks(newTasks);
+            
+        } catch (err) {
+            console.error('Error in fetchAssignedChores:', err);
+        }
+    };
 
     // Handle task addition and editing
     const handleAddTask = useCallback((event: React.FormEvent) => {
@@ -616,7 +736,14 @@ function App() {
                     
                     // Update the task in the database
                     if (taskToUpdate) {
-                        updateTaskCompletionInDatabase(taskToUpdate, newCompletedStatus);
+                        updateTaskCompletionInDatabase(taskToUpdate, newCompletedStatus)
+                            .then(() => {
+                                // Refresh assigned chores to ensure consistency across views
+                                if (kids.length > 0) {
+                                    // Use the kids state which already has colors
+                                    fetchAssignedChores(kids);
+                                }
+                            });
                     }
                 }
                 
@@ -832,25 +959,24 @@ function App() {
                                 className="task-select"
                                 value={selectedChore?.frequency || recurrenceType}
                                 onChange={(e) => setRecurrenceType(e.target.value as RecurrencePattern['type'] | '')}
-                                disabled={selectedChore?.frequency ? true : false} // Disable if chore has a frequency
+                                disabled={(selectedChore?.frequency || recurrenceType) === ''} // Disable if One-Time is selected
                             >
                                 <option value="">One-time</option>
                                 <option value="daily">Daily</option>
                                 <option value="weekly">Weekly</option>
                                 <option value="monthly">Monthly</option>
                             </select>
-                            {(selectedChore?.frequency || recurrenceType !== '') && (
-                                    <input
-                                    type="number"
-                                    min="1"
-                                    max="52"
-                                    value={recurrenceCount}
-                                    onChange={(e) => setRecurrenceCount(Math.max(1, parseInt(e.target.value) || 1))}
-                                    className="task-input occurrence-input"
-                                    placeholder="Times"
-                                />
-                            )}
-                                </div>
+                            <input
+                                type="number"
+                                min="1"
+                                max="52"
+                                value={recurrenceCount}
+                                onChange={(e) => setRecurrenceCount(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="task-input occurrence-input"
+                                placeholder="Times"
+                                disabled={(selectedChore?.frequency || recurrenceType) === ''} // Disable if One-Time is selected
+                            />
+                        </div>
                                 <button
                             type="submit" 
                             className="task-button task-button-primary"
@@ -954,6 +1080,7 @@ function App() {
     return (
         <ThemeProvider>
             <Router>
+                <RouteObserver />
                 <div className="app-container">
                     <SideNav />
                     <div className="main-content">
