@@ -1,0 +1,767 @@
+.react-calendar__tile .dot {
+    height: 8px;
+    width: 8px;
+    background-color: #ff6347;
+    border-radius: 50%;
+    display: inline-block;
+    margin-top: 2px;
+}
+
+.logoCalendar {
+    width: 70%;
+    display: flex;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.max-w-6xl {
+  max-width: 100%;
+  padding: 1rem;
+}
+
+.calendar-container {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 1rem;
+  border: 1px solid #F3F4F6;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.task-section {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 1rem;
+  border: 1px solid #F3F4F6;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.calendar-nav-button {
+  padding: 0.75rem;
+  border-radius: 50%;
+  color: #4B5563;
+  transition: all 200ms;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background-color: #F9FAFB;
+}
+
+.calendar-nav-button:hover {
+  background-color: #F3F4F6;
+  color: #111827;
+  transform: scale(1.05);
+}
+
+.calendar-month-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  flex: 1;
+  margin-bottom: 0.5rem;
+}
+
+.calendar-day-header {
+  text-align: center;
+  font-weight: 600;
+  color: #6B7280;
+  padding: 0.5rem 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.calendar-day {
+  position: relative;
+  padding: 0.5rem;
+  min-height: 60px;
+  text-align: center;
+  border: 1px solid #F3F4F6;
+  border-radius: 0.75rem;
+  transition: all 200ms;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.calendar-day:hover {
+  border-color: #3B82F6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.calendar-day.empty {
+  background-color: #F9FAFB;
+  border-color: transparent;
+  cursor: default;
+}
+
+.calendar-day.selected {
+  background-color: #EFF6FF;
+  border-color: #3B82F6;
+  font-weight: 600;
+  color: #2563EB;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.calendar-day.has-tasks {
+  font-weight: 500;
+}
+
+.calendar-day.has-tasks::after {
+  content: '';
+  position: absolute;
+  bottom: 0.25rem;
+  left: 50%;
+  width: 0.375rem;
+  height: 0.375rem;
+  background-color: #3B82F6;
+  border-radius: 9999px;
+  transform: translateX(-50%);
+}
+
+.task-header {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.task-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+/* Common styles for all form controls */
+.task-input,
+.task-time-input,
+.task-select,
+.task-button {
+  height: 40px;
+  padding: 0 1rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Update grid layout for controls */
+.task-controls {
+    display: grid;
+    grid-template-columns: 1fr 0.8fr auto auto;
+    gap: 0.5rem;
+    width: 100%;
+    align-items: center;
+}
+
+/* Update recurrence group styling */
+.recurrence-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-self: end;
+}
+
+.recurrence-group .task-select {
+    width: 120px;  /* Increased from 100px to 120px */
+}
+
+.occurrence-input {
+    width: 60px;
+    text-align: center;
+    padding: 0 0.5rem;
+}
+
+/* Person dropdown width */
+.task-select {
+    width: 80%;
+    justify-self: center;
+}
+
+/* Button specific styles while maintaining height */
+.task-button {
+  background-color: #3B82F6;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.task-button:hover {
+  background-color: #2563EB;
+}
+
+.task-date-input {
+  width: 50%;
+}
+
+.task-button-primary {
+  background-color: #3B82F6;
+  color: white;
+}
+
+.task-button-primary:hover {
+  background-color: #2563EB;
+}
+
+.task-button-success {
+  background-color: #10B981;
+  color: white;
+}
+
+.task-button-success:hover {
+  background-color: #059669;
+}
+
+.task-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(80vh - 250px);
+  padding-right: 0.5rem;
+}
+
+.task-item {
+  padding: 0.75rem;
+  border-left: 4px solid transparent;
+  border-radius: 0.5rem;
+  transition: all 200ms;
+  margin-bottom: 0.5rem;
+}
+
+.task-item:hover {
+  border-color: #D1D5DB;
+}
+
+.task-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.task-text {
+  color: #1F2937;
+}
+
+.task-assignee {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.task-assignee::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--member-color);
+}
+
+.task-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.task-action-button {
+  padding: 0.5rem;
+  border-radius: 9999px;
+  transition: all 200ms;
+}
+
+.task-action-button:hover {
+  background-color: #F3F4F6;
+}
+
+/* Dark mode styles */
+.dark .calendar-container,
+.dark .task-section {
+  background-color: #1F2937;
+  border-color: #374151;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.dark .calendar-month-title,
+.dark .task-header,
+.dark .task-text {
+  color: #F9FAFB;
+}
+
+.dark .calendar-nav-button {
+  background-color: #374151;
+  color: #E5E7EB;
+}
+
+.dark .calendar-nav-button:hover {
+  background-color: #4B5563;
+  color: #F9FAFB;
+}
+
+.dark .calendar-day-header {
+  color: #9CA3AF;
+}
+
+.dark .calendar-day {
+  background-color: #1F2937;
+  border-color: #374151;
+}
+
+.dark .calendar-day:hover {
+  border-color: #3B82F6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.dark .calendar-day.empty {
+  background-color: #111827;
+}
+
+.dark .calendar-day.selected {
+  background-color: #1E3A8A;
+  border-color: #3B82F6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.dark .task-input,
+.dark .task-select {
+  background-color: #374151;
+  border-color: #4B5563;
+  color: #F9FAFB;
+}
+
+.dark .task-item {
+  border-color: #374151;
+}
+
+.dark .task-action-button:hover {
+  background-color: #374151;
+}
+
+.task-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #6B7280;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.task-due {
+  color: #6B7280;
+}
+
+/* Dark mode additions */
+.dark .task-date-input {
+  background-color: #374151;
+  border-color: #4B5563;
+  color: #F9FAFB;
+}
+
+.dark .task-due {
+  color: #9CA3AF;
+}
+
+.task-dots {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+  padding: 4px;
+}
+
+.task-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode enhancements */
+.dark .calendar-header,
+.dark .task-header {
+  border-bottom-color: #374151;
+}
+
+.dark .task-dot {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive adjustments */
+@media (min-width: 640px) {
+  .calendar-container,
+  .task-section {
+    padding: 1.5rem;
+  }
+
+  .calendar-grid {
+    gap: 0.5rem;
+  }
+
+  .calendar-day {
+    min-height: 70px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .task-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-container {
+    height: 90vh;
+  }
+  
+  .task-section {
+    height: 70vh;
+  }
+
+  .task-list {
+    max-height: calc(70vh - 250px);
+  }
+
+  .recurrence-group {
+    width: 100%;
+    justify-content: start;
+  }
+
+  .recurrence-group .task-select {
+    width: calc(100% - 70px);  /* Keep the responsive behavior */
+  }
+}
+
+@media (min-width: 1024px) {
+  .max-w-6xl {
+    padding: 2rem;
+  }
+
+  .calendar-container,
+  .task-section {
+    padding: 2rem;
+  }
+
+  .calendar-grid {
+    gap: 0.75rem;
+  }
+
+  .calendar-day {
+    min-height: 80px;
+  }
+
+  .calendar-day-header {
+    padding: 0.75rem 0;
+    font-size: 0.875rem;
+  }
+}
+
+/* Task list scrollable container */
+.task-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.task-list::-webkit-scrollbar-track {
+  background: #F3F4F6;
+  border-radius: 3px;
+}
+
+.task-list::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 3px;
+}
+
+/* Dark mode scrollbar */
+.dark .task-list::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+.dark .task-list::-webkit-scrollbar-thumb {
+  background: #4B5563;
+}
+
+/* Grid layout adjustment */
+.grid-cols-1 {
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .grid-cols-1 {
+    gap: 2rem;
+  }
+}
+
+/* Make form inputs more compact on mobile */
+@media (max-width: 639px) {
+  .task-input,
+  .task-date-input,
+  .task-time-input,
+  .task-select {
+    padding: 0.375rem;
+    font-size: 0.875rem;
+  }
+
+  .task-button {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .calendar-header {
+    margin-bottom: 1rem;
+  }
+
+  .task-header {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+}
+
+.calendar-day.current-day {
+    border: 2px solid #3B82F6;
+    font-weight: 600;
+    position: relative;
+}
+
+.calendar-day.current-day::before {
+    content: 'Today';
+    position: absolute;
+    top: -0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #3B82F6;
+    color: white;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.675rem;
+    font-weight: 500;
+}
+
+/* Dark mode */
+.dark .calendar-day.current-day {
+    border-color: #60A5FA;
+}
+
+.dark .calendar-day.current-day::before {
+    background-color: #60A5FA;
+}
+
+/* Task completion styles */
+.task-item.completed {
+    background-color: rgba(16, 185, 129, 0.1); /* Light green background */
+}
+
+.task-item.overdue {
+    background-color: rgba(239, 68, 68, 0.1); /* Light red background */
+}
+
+.task-checkbox {
+    width: 18px;
+    height: 18px;
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+.task-header-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.completed-text {
+    text-decoration: line-through;
+    color: #6B7280;
+}
+
+.task-main {
+    flex: 1;
+}
+
+/* Dark mode adjustments */
+.dark .task-item.completed {
+    background-color: rgba(16, 185, 129, 0.2);
+}
+
+.dark .task-item.overdue {
+    background-color: rgba(239, 68, 68, 0.2);
+}
+
+.dark .completed-text {
+    color: #9CA3AF;
+}
+
+.recurrence-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 1rem;
+    background-color: #F9FAFB;
+    border-radius: 0.5rem;
+    border: 1px solid #E5E7EB;
+}
+
+.dark .recurrence-options {
+    background-color: #374151;
+    border-color: #4B5563;
+}
+
+.task-button.recurrence-active {
+    background-color: #3B82F6;
+    color: white;
+}
+
+.dark .task-button.recurrence-active {
+    background-color: #2563EB;
+}
+
+.delete-confirmation-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.delete-confirmation {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 90%;
+}
+
+.delete-confirmation p {
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: #374151;
+}
+
+.delete-confirmation-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.task-button-danger {
+    background-color: #EF4444;
+}
+
+.task-button-danger:hover {
+    background-color: #DC2626;
+}
+
+.task-button-secondary {
+    background-color: #6B7280;
+}
+
+.task-button-secondary:hover {
+    background-color: #4B5563;
+}
+
+/* Dark mode styles */
+.dark .delete-confirmation {
+    background-color: #1F2937;
+}
+
+.dark .delete-confirmation p {
+    color: #E5E7EB;
+}
+
+.app-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidenav {
+    width: 200px;
+    background-color: #1F2937;
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+}
+
+.sidenav-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nav-item {
+    padding: 0.75rem 1rem;
+    color: #E5E7EB;
+    text-decoration: none;
+    border-radius: 0.375rem;
+    transition: all 200ms;
+}
+
+.nav-item:hover {
+    background-color: #374151;
+}
+
+.nav-item.active {
+    background-color: #3B82F6;
+    color: white;
+}
+
+.main-content {
+    flex: 1;
+    padding: 1rem;
+}
+
+/* Dark mode adjustments */
+.dark .sidenav {
+    background-color: #111827;
+}
+
+.dark .nav-item {
+    color: #F9FAFB;
+}
+
+.dark .nav-item:hover {
+    background-color: #1F2937;
+}
+
+/* Dark mode adjustment */
+.dark .task-form-group {
+    border-bottom-color: #374151;
+}
