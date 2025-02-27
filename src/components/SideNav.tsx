@@ -19,6 +19,12 @@ const SideNav = () => {
                 >
                     User
                 </Link>
+                <Link 
+                    to="/kid/profile" 
+                    className={`nav-item ${location.pathname === '/kid/profile' ? 'active' : ''}`}
+                >
+                    Dashboard
+                </Link>
             </div>
         </nav>
     );

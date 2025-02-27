@@ -4,6 +4,7 @@ import './assets/calendar.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import SideNav from './components/SideNav';
 import UserView from './components/UserView';
+import KidProfile from "./pages/KidProfile";
 
 // Define interfaces for data structures
 interface TeamMember {
@@ -594,6 +595,10 @@ function App() {
                                 onChangeMonth={changeMonth}
                             />
                         } />
+                        {/* Kid profile route */}
+                        <Route path="/kid/profile" element={<KidProfile />} />
+                        {/* Kid profile route with ID parameter */}
+                        <Route path="/kid/profile/:id" element={<KidProfile />} />
                         {/* Default route redirect */}
                         <Route path="/" element={<Navigate to="/admin" />} />
                     </Routes>
