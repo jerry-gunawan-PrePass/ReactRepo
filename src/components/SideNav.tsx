@@ -26,6 +26,9 @@ const SideNav: React.FC = () => {
                 <Link to="/kid/profile" className={`sidenav-link ${isActive('/kid/profile') ? 'active' : ''}`}>
                     Kid Profile
                 </Link>
+                <Link to="/chores" className={`sidenav-link ${isActive('/chores') ? 'active' : ''}`}>
+                    Manage Chores
+                </Link>
             </nav>
             <div className="sidenav-footer">
                 <ThemeToggle />
