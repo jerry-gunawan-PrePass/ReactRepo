@@ -21,6 +21,14 @@ const SideNav = () => {
                 <div className="mt-auto pt-4 flex justify-center">
                     <ThemeToggle />
                 </div>
+                    User
+                </Link>
+                <Link 
+                    to="/kid/profile" 
+                    className={`nav-item ${location.pathname === '/kid/profile' ? 'active' : ''}`}
+                >
+                    Dashboard
+                </Link>
             </div>
         </nav>
     );
