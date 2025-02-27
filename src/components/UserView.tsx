@@ -14,9 +14,17 @@ interface UserViewProps {
     onChangeMonth: (offset: number) => void;  // For calendar navigation
     closedTasks: Record<string, boolean>;  // Add this
     onToggleTaskCompletion: (taskId: string) => void;  // Add this prop
+    onSelectDate?: (date: Date) => void;  // Add this prop for date selection
 }
 
-const UserView = ({ tasks, selectedDate, onChangeMonth, closedTasks, onToggleTaskCompletion }: UserViewProps) => {
+const UserView = ({ 
+    tasks, 
+    selectedDate, 
+    onChangeMonth, 
+    closedTasks, 
+    onToggleTaskCompletion,
+    onSelectDate 
+}: UserViewProps) => {
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
@@ -44,6 +52,14 @@ const UserView = ({ tasks, selectedDate, onChangeMonth, closedTasks, onToggleTas
         }
 
         return days;
+    };
+
+    // Update handleDateClick to use the onSelectDate prop
+    const handleDateClick = (day: number) => {
+        if (onSelectDate) {
+            const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
+            onSelectDate(newDate);
+        }
     };
 
     const renderTaskDots = (day: number) => {
@@ -108,7 +124,8 @@ const UserView = ({ tasks, selectedDate, onChangeMonth, closedTasks, onToggleTas
                             key={index}
                             className={`calendar-day ${!day ? 'empty' : ''} ${
                                 day && selectedDate.getDate() === day ? 'selected' : ''
-                            } ${isCurrentDay(day) ? 'current-day' : ''}`}
+                            } ${isCurrentDay(day) ? 'current-day' : ''} ${day ? 'clickable' : ''}`}
+                            onClick={() => day && handleDateClick(day)}
                         >
                             {day}
                             {day && renderTaskDots(day)}
@@ -117,45 +134,56 @@ const UserView = ({ tasks, selectedDate, onChangeMonth, closedTasks, onToggleTas
                 </div>
             </div>
             <div className="task-section">
+                <div className="selected-date-header">
+                    <h3 className="text-xl font-semibold mb-4">
+                        Tasks for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    </h3>
+                </div>
                 <div className="task-list">
-                    {getTasksForSelectedDate(selectedDate).map((task) => (
-                        <div 
-                            key={task.id} 
-                            className={`task-item 
-                                ${closedTasks[task.id] ? 'completed' : ''} 
-                                ${task.completed && !closedTasks[task.id] ? 'user-completed' : ''} 
-                                ${isTaskOverdue(task) ? 'overdue' : ''}`
-                            }
-                            style={{ borderLeftColor: task.color }}
-                        >
-                            <div className="task-item-content">
-                                <div className="task-main">
-                                    <div className="task-header-row">
-                                        <label className="checkbox-label">
-                                            <input
-                                                type="checkbox"
-                                                checked={task.completed}
-                                                onChange={() => onToggleTaskCompletion(task.id)}
-                                                className="task-checkbox"
-                                            />
-                                            Complete
-                                        </label>
+                    {getTasksForSelectedDate(selectedDate).length === 0 ? (
+                        <div className="no-tasks-message p-4 text-center text-gray-500">
+                            No tasks scheduled for this day
+                        </div>
+                    ) : (
+                        getTasksForSelectedDate(selectedDate).map((task) => (
+                            <div 
+                                key={task.id} 
+                                className={`task-item 
+                                    ${closedTasks[task.id] ? 'completed' : ''} 
+                                    ${task.completed && !closedTasks[task.id] ? 'user-completed' : ''} 
+                                    ${isTaskOverdue(task) ? 'overdue' : ''}`
+                                }
+                                style={{ borderLeftColor: task.color }}
+                            >
+                                <div className="task-item-content">
+                                    <div className="task-main">
+                                        <div className="task-header-row">
+                                            <label className="checkbox-label">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={task.completed}
+                                                    onChange={() => onToggleTaskCompletion(task.id)}
+                                                    className="task-checkbox"
+                                                />
+                                                Complete
+                                            </label>
+                                        </div>
+                                        <p className={`task-text ${task.completed ? 'completed-text' : ''} font-bold text-lg mt-2`}>
+                                            {task.text}
+                                        </p>
+                                        <p className="task-meta">
+                                            <span className="task-assignee">
+                                                Assigned to: {task.assignedTo}
+                                            </span>
+                                            <span className="task-due">
+                                                Due: {task.dueDate} at {task.dueTime}
+                                            </span>
+                                        </p>
                                     </div>
-                                    <p className={`task-text ${task.completed ? 'completed-text' : ''} font-bold text-lg mt-2`}>
-                                        {task.text}
-                                    </p>
-                                    <p className="task-meta">
-                                        <span className="task-assignee">
-                                            Assigned to: {task.assignedTo}
-                                        </span>
-                                        <span className="task-due">
-                                            Due: {task.dueDate} at {task.dueTime}
-                                        </span>
-                                    </p>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             </div>
         </div>

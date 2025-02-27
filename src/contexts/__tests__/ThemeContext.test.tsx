@@ -2,15 +2,21 @@ import { render, act } from '@testing-library/react';
 import { ThemeProvider, useTheme } from '../ThemeContext';
 
 // Mock localStorage
+const getItemMock = jest.fn();
+const setItemMock = jest.fn();
+const clearMock = jest.fn();
+
 const localStorageMock = {
-    getItem: jest.fn(),
-    setItem: jest.fn(),
-    clear: jest.fn()
+    getItem: getItemMock,
+    setItem: setItemMock,
+    clear: clearMock
 };
+
 global.localStorage = localStorageMock as unknown as Storage;
 
 // Mock matchMedia
-global.matchMedia = jest.fn().mockImplementation(query => ({
+const matchMediaMock = jest.fn();
+global.matchMedia = matchMediaMock.mockImplementation(query => ({
     matches: false,
     media: query,
     onchange: null,
@@ -36,14 +42,14 @@ const TestComponent = () => {
 
 describe('ThemeContext', () => {
     beforeEach(() => {
-        localStorage.clear();
+        clearMock();
         jest.clearAllMocks();
         document.documentElement.classList.remove('dark');
     });
 
     it('provides default light theme when no preference is saved', () => {
-        (localStorage.getItem as jest.Mock).mockReturnValue(null);
-        (global.matchMedia as jest.Mock).mockImplementation(() => ({ matches: false }));
+        getItemMock.mockReturnValue(null);
+        matchMediaMock.mockImplementation(() => ({ matches: false }));
 
         const { getByTestId } = render(
             <ThemeProvider>
@@ -55,8 +61,8 @@ describe('ThemeContext', () => {
     });
 
     it('provides dark theme when system prefers dark mode', () => {
-        (localStorage.getItem as jest.Mock).mockReturnValue(null);
-        (global.matchMedia as jest.Mock).mockImplementation(() => ({ matches: true }));
+        getItemMock.mockReturnValue(null);
+        matchMediaMock.mockImplementation(() => ({ matches: true }));
 
         const { getByTestId } = render(
             <ThemeProvider>
@@ -68,7 +74,7 @@ describe('ThemeContext', () => {
     });
 
     it('uses theme from localStorage if available', () => {
-        (localStorage.getItem as jest.Mock).mockReturnValue('dark');
+        getItemMock.mockReturnValue('dark');
 
         const { getByTestId } = render(
             <ThemeProvider>
@@ -80,7 +86,7 @@ describe('ThemeContext', () => {
     });
 
     it('toggles theme correctly', () => {
-        (localStorage.getItem as jest.Mock).mockReturnValue('light');
+        getItemMock.mockReturnValue('light');
 
         const { getByTestId } = render(
             <ThemeProvider>
@@ -98,7 +104,7 @@ describe('ThemeContext', () => {
         });
 
         expect(themeValue.textContent).toBe('dark');
-        expect(localStorage.setItem).toHaveBeenCalledWith('theme', 'dark');
+        expect(setItemMock).toHaveBeenCalledWith('theme', 'dark');
     });
 
     it('throws error when useTheme is used outside ThemeProvider', () => {

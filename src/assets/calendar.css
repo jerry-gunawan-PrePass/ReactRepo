@@ -805,3 +805,39 @@
     border-color: var(--ring);
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }
+
+/* Add styles for the clickable calendar days and selected date header */
+.calendar-day.clickable {
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.calendar-day.clickable:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+    transform: scale(1.05);
+}
+
+.selected-date-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.no-tasks-message {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Dark mode support */
+.dark .no-tasks-message {
+    background-color: #2d3748;
+    color: #a0aec0;
+}
+
+.dark .selected-date-header {
+    border-bottom-color: #2d3748;
+}

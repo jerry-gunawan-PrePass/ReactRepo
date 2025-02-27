@@ -8,7 +8,11 @@ interface Chore {
   created_at: string;
 }
 
-const ChoresManager: React.FC = () => {
+interface ChoresManagerProps {
+  onChoreAdded?: () => Promise<void>;
+}
+
+const ChoresManager: React.FC<ChoresManagerProps> = ({ onChoreAdded }) => {
   const [chores, setChores] = useState<Chore[]>([]);
   const [newChoreDescription, setNewChoreDescription] = useState('');
   const [newChoreFrequency, setNewChoreFrequency] = useState('one-time');
@@ -89,6 +93,11 @@ const ChoresManager: React.FC = () => {
       // Refresh the entire chores list
       await fetchChores();
       
+      // Call the parent's onChoreAdded function if provided
+      if (onChoreAdded) {
+        await onChoreAdded();
+      }
+      
       setNewChoreDescription('');
       setNewChoreFrequency('one-time');
       setSuccessMessage('Chore added successfully!');
@@ -116,6 +125,12 @@ const ChoresManager: React.FC = () => {
       if (error) throw error;
       
       setChores(prev => prev.filter(chore => chore.id !== id));
+      
+      // Call the parent's onChoreAdded function to update the parent view
+      if (onChoreAdded) {
+        await onChoreAdded();
+      }
+      
       setSuccessMessage('Chore deleted successfully!');
       
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -156,7 +171,7 @@ const ChoresManager: React.FC = () => {
             <input
               type="text"
               id="description"
-              className="w-full p-3 border rounded text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-3 border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={newChoreDescription}
               onChange={(e) => setNewChoreDescription(e.target.value)}
               placeholder="Enter chore description"
@@ -171,7 +186,7 @@ const ChoresManager: React.FC = () => {
             </label>
             <select
               id="frequency"
-              className="w-full p-3 border rounded text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-3 border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={newChoreFrequency}
               onChange={(e) => setNewChoreFrequency(e.target.value)}
               required
@@ -186,7 +201,7 @@ const ChoresManager: React.FC = () => {
           
           <button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded text-base font-medium"
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg text-base font-medium"
             disabled={isLoading}
             style={{ minHeight: "45px" }}
           >
@@ -227,7 +242,7 @@ const ChoresManager: React.FC = () => {
                     <td className="py-2 px-4">
                       <button
                         onClick={() => handleDeleteChore(chore.id)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 px-3 py-1 rounded-lg border border-red-500 hover:border-red-700"
                       >
                         Delete
                       </button>

@@ -3,11 +3,16 @@ import ThemeToggle from '../ThemeToggle';
 import { ThemeProvider } from '../../contexts/ThemeContext';
 
 // Mock localStorage
+const getItemMock = jest.fn();
+const setItemMock = jest.fn();
+const clearMock = jest.fn();
+
 const localStorageMock = {
-    getItem: jest.fn(),
-    setItem: jest.fn(),
-    clear: jest.fn()
+    getItem: getItemMock,
+    setItem: setItemMock,
+    clear: clearMock
 };
+
 // Cast the mock functions to the correct Jest mock type
 global.localStorage = localStorageMock as unknown as Storage;
 
@@ -39,7 +44,7 @@ describe('ThemeToggle', () => {
     });
 
     it('shows sun icon in light mode', () => {
-        (localStorage.getItem as jest.Mock).mockReturnValue('light');
+        getItemMock.mockReturnValue('light');
         render(
             <ThemeProvider>
                 <ThemeToggle />
@@ -49,7 +54,7 @@ describe('ThemeToggle', () => {
     });
 
     it('shows moon icon in dark mode', () => {
-        (localStorage.getItem as jest.Mock).mockReturnValue('dark');
+        getItemMock.mockReturnValue('dark');
         render(
             <ThemeProvider>
                 <ThemeToggle />
@@ -59,7 +64,7 @@ describe('ThemeToggle', () => {
     });
 
     it('toggles theme when clicked', () => {
-        (localStorage.getItem as jest.Mock).mockReturnValue('light');
+        getItemMock.mockReturnValue('light');
         render(
             <ThemeProvider>
                 <ThemeToggle />
@@ -71,7 +76,7 @@ describe('ThemeToggle', () => {
 
         // After click, should show moon icon (dark mode)
         expect(button.querySelector('.fa-moon')).toBeInTheDocument();
-        expect(localStorage.setItem).toHaveBeenCalledWith('theme', 'dark');
+        expect(setItemMock).toHaveBeenCalledWith('theme', 'dark');
     });
 
     it('maintains accessibility features', () => {
