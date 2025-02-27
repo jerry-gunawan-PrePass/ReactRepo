@@ -7,6 +7,10 @@ import UserView from './components/UserView';
 
 import { ThemeProvider } from './contexts/ThemeContext';
 import KidProfile from "./pages/KidProfile";
+import ChoresManager from "./pages/ChoresManager";
+
+// Import supabase client
+import { supabase } from './lib/supabaseClient';
 
 // Define interfaces for data structures
 interface TeamMember {
@@ -48,13 +52,30 @@ interface NotificationPermission {
     error?: string;
 }
 
+// Update interfaces to match Supabase tables
+interface Kid {
+    id: number;
+    first_name: string;
+    last_name: string;
+    points: number;
+    avatar_url: string | null;
+    color: string; // We'll add this for UI consistency
+}
+
+interface Chore {
+    id: number;
+    description: string;
+    created_at: string;
+    frequency: string;
+}
+
 function App() {
     // State for managing tasks grouped by date
     const [tasks, setTasks] = useState<Record<string, Task[]>>({});
     
     // Calendar navigation and task creation states
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [newTask, setNewTask] = useState('');
+    const [, setNewTask] = useState('');
     const [dueTime, setDueTime] = useState('12:00');
     
     // Task editing states
@@ -64,7 +85,7 @@ function App() {
     // Recurrence handling states
     const [recurrenceType, setRecurrenceType] = useState<RecurrencePattern['type'] | ''>('');
     const [recurrenceCount, setRecurrenceCount] = useState<number>(1);
-    const [selectedAssignee, setSelectedAssignee] = useState<TeamMember>(TEAM_MEMBERS[0]);
+    const [, setSelectedAssignee] = useState<TeamMember>(TEAM_MEMBERS[0]);
     const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>({ granted: false });
     const [deleteConfirmation, setDeleteConfirmation] = useState<{
         show: boolean;
@@ -75,10 +96,21 @@ function App() {
     // Add state for closed tasks
     const [closedTasks, setClosedTasks] = useState<Record<string, boolean>>({});
 
+    // Replace TEAM_MEMBERS with kids from Supabase
+    const [kids, setKids] = useState<Kid[]>([]);
+    // Add state for chores
+    const [chores, setChores] = useState<Chore[]>([]);
+    // Add state for selected chore
+    const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
+    
+    // Replace selectedAssignee with selectedKid
+    const [selectedKid, setSelectedKid] = useState<Kid | null>(null);
+
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
+
 
     // Calendar helper functions
     const getDaysInMonth = (date: Date) => {
@@ -142,11 +174,64 @@ function App() {
         return dates;
     };
 
+    // Fetch kids and chores from Supabase
+    useEffect(() => {
+        async function fetchData() {
+            // Fetch kids
+            const { data: kidsData, error: kidsError } = await supabase
+                .from('kids')
+                .select('*');
+            
+            if (kidsError) {
+                console.error('Error fetching kids:', kidsError);
+            } else if (kidsData) {
+                // Add color property to each kid (you can customize this)
+                const kidsWithColors = kidsData.map((kid, index) => ({
+                    ...kid,
+                    color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'][index % 4]
+                }));
+                setKids(kidsWithColors);
+                if (kidsWithColors.length > 0) {
+                    setSelectedKid(kidsWithColors[0]);
+                }
+            }
+            
+            // Fetch chores - log the response to debug
+            const choresResponse = await supabase
+                .from('chores')
+                .select('*');
+            
+            console.log('Chores response:', choresResponse);
+            
+            if (choresResponse.error) {
+                console.error('Error fetching chores:', choresResponse.error);
+            } else if (choresResponse.data) {
+                setChores(choresResponse.data);
+                console.log('Chores loaded:', choresResponse.data);
+            }
+        }
+        
+        fetchData();
+    }, []);
+
     // Handle task addition and editing
     const handleAddTask = useCallback((event: React.FormEvent) => {
         event.preventDefault();
-        if (newTask.trim() === '') return;
+        if (!selectedChore || !selectedKid) {
+            console.error("Missing required data:", { selectedChore, selectedKid });
+            return;
+        }
 
+        console.log("Attempting to assign chore:", {
+            chore: selectedChore,
+            kid: selectedKid,
+            date: selectedDate,
+            time: dueTime
+        });
+
+        // Use the chore's frequency if available, otherwise use the selected recurrence type
+        const effectiveRecurrenceType = selectedChore.frequency || recurrenceType;
+        
         if (isEditing && editingTaskId) {
             // Update existing task
             setTasks(prevTasks => {
@@ -156,10 +241,10 @@ function App() {
                         task.id === editingTaskId
                             ? {
                                 ...task,
-                                text: newTask,
-                                assignedTo: selectedAssignee.name,
+                                text: selectedChore.description,
+                                assignedTo: `${selectedKid.first_name} ${selectedKid.last_name}`,
                                 dueTime: dueTime,
-                                color: selectedAssignee.color
+                                color: selectedKid.color
                             }
                             : task
                     );
@@ -168,67 +253,154 @@ function App() {
             });
         } else {
             // Create new task(s) with recurrence if specified
-            const recurrence: RecurrencePattern | undefined = recurrenceType !== '' ? {
-                type: recurrenceType as RecurrencePattern['type'],
+            const recurrence: RecurrencePattern | undefined = effectiveRecurrenceType !== '' ? {
+                type: effectiveRecurrenceType as RecurrencePattern['type'],
                 occurrences: recurrenceCount
             } : undefined;
 
             const startDate = selectedDate;
+            const formattedDate = startDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 
             const baseTask: Omit<Task, 'id' | 'dueDate'> = {
-                text: newTask,
+                text: selectedChore.description,
                 timestamp: Date.now(),
-                assignedTo: selectedAssignee.name,
-                assigneePhone: selectedAssignee.phone,
+                assignedTo: `${selectedKid.first_name} ${selectedKid.last_name}`,
+                assigneePhone: '',
                 dueTime,
-                color: selectedAssignee.color,
+                color: selectedKid.color,
                 completed: false,
                 recurrence
             };
 
-            if (recurrence) {
-                const dates = generateRecurringDates(
-                    startDate.toISOString().split('T')[0],
-                    recurrence
-                );
+            // First, check for existing assignments to avoid duplicates
+            const checkExistingAssignment = async () => {
+                try {
+                    // Get the maximum ID to help with sequence issues
+                    const { data: maxIdResult } = await supabase
+                        .from('kids_chores')
+                        .select('id')
+                        .order('id', { ascending: false })
+                        .limit(1);
+                    
+                    const nextId = maxIdResult && maxIdResult.length > 0 ? maxIdResult[0].id + 1 : 1;
+                    console.log("Next ID to use:", nextId);
+                    
+                    // Check if this assignment already exists
+                    const { data: existingAssignments } = await supabase
+                        .from('kids_chores')
+                        .select('*')
+                        .eq('kid_id', selectedKid.id)
+                        .eq('chore_id', selectedChore.id)
+                        .eq('assigned_date', formattedDate);
+                    
+                    if (existingAssignments && existingAssignments.length > 0) {
+                        alert("This chore is already assigned to this kid on this date.");
+                        return;
+                    }
+                    
+                    // Insert with explicit ID to avoid sequence issues
+                    const kidChoreData = {
+                        id: nextId,
+                        kid_id: selectedKid.id,
+                        chore_id: selectedChore.id,
+                        assigned_date: formattedDate,
+                        completed: false
+                    };
 
-                setTasks(prevTasks => {
-                    const newTasks = { ...prevTasks };
-                    dates.forEach((date, index) => {
-                        const dateString = new Date(date).toDateString();
-                        const task: Task = {
-                            ...baseTask,
-                            id: uuidv4(),
-                            dueDate: date,
-                            text: `${newTask} (${index + 1}/${recurrence.occurrences})`
-                        };
-                        newTasks[dateString] = [...(newTasks[dateString] || []), task];
-                        scheduleNotification(task);
-                    });
-                    return newTasks;
-                });
-            } else {
-                const dateString = startDate.toDateString();
-                const task: Task = {
-                    ...baseTask,
-                    id: uuidv4(),
-                    dueDate: startDate.toISOString().split('T')[0]
-                };
+                    console.log("Inserting into kids_chores:", kidChoreData);
+                    
+                    const { data, error } = await supabase
+                        .from('kids_chores')
+                        .insert(kidChoreData)
+                        .select();
 
-                setTasks(prevTasks => ({
-                    ...prevTasks,
-                    [dateString]: [...(prevTasks[dateString] || []), task]
-                }));
+                    if (error) {
+                        console.error('Error inserting kid_chore:', error);
+                        
+                        if (error.code === '23505') { // Duplicate key error
+                            alert("There was an issue with the database sequence. Trying an alternative approach...");
+                            
+                            // Try without specifying ID
+                            const { data: retryData, error: retryError } = await supabase
+                                .from('kids_chores')
+                                .insert({
+                                    kid_id: selectedKid.id,
+                                    chore_id: selectedChore.id,
+                                    assigned_date: formattedDate,
+                                    completed: false
+                                })
+                                .select();
+                                
+                            if (retryError) {
+                                throw retryError;
+                            }
+                            
+                            return retryData;
+                        }
+                        
+                        throw error;
+                    }
+                    
+                    return data;
+                } catch (err: unknown) {
+                    console.error("Assignment error:", err);
+                    alert(`Failed to assign chore: ${err instanceof Error ? err.message : 'Unknown error'}`);
+                    return null;
+                }
+            };
+
+            // Execute the assignment and update UI
+            checkExistingAssignment().then(data => {
+                if (!data) return; // Assignment failed
                 
-                scheduleNotification(task);
-            }
+                console.log('Successfully assigned chore to kid:', data);
+                
+                // Rest of the task creation logic for the UI
+                if (recurrence) {
+                    const dates = generateRecurringDates(
+                        formattedDate,
+                        recurrence
+                    );
+
+                    setTasks(prevTasks => {
+                        const newTasks = { ...prevTasks };
+                        dates.forEach((date, index) => {
+                            const dateString = new Date(date).toDateString();
+                            const task: Task = {
+                                ...baseTask,
+                                id: uuidv4(),
+                                dueDate: date,
+                                text: `${selectedChore.description} (${index + 1}/${recurrence.occurrences})`
+                            };
+                            newTasks[dateString] = [...(newTasks[dateString] || []), task];
+                            scheduleNotification(task);
+                        });
+                        return newTasks;
+                    });
+                } else {
+                    const dateString = startDate.toDateString();
+                    const task: Task = {
+                        ...baseTask,
+                        id: uuidv4(),
+                        dueDate: formattedDate
+                    };
+
+                    setTasks(prevTasks => ({
+                        ...prevTasks,
+                        [dateString]: [...(prevTasks[dateString] || []), task]
+                    }));
+                    
+                    scheduleNotification(task);
+                }
+                
+                // Clear form and show success message
+                setSelectedChore(null);
+                alert("Chore assigned successfully!");
+            });
         }
+    }, [selectedDate, selectedChore, selectedKid, dueTime, recurrenceType, recurrenceCount, isEditing, editingTaskId]);
 
-        // Clear form
-        setNewTask('');
-    }, [selectedDate, newTask, selectedAssignee, dueTime, recurrenceType, recurrenceCount, isEditing, editingTaskId]);
-
-    const handleDeleteTask = (taskId: string) => {
+    const handleDeleteTask = (_dateString: string, taskId: string) => {
         setTasks(prevTasks => {
             const newTasks = { ...prevTasks };
             // Find and remove the task from the correct date
@@ -438,13 +610,23 @@ function App() {
             </div>
             <div className="task-section">
                 <form onSubmit={handleAddTask} className="task-form-group">
-                    <input
-                        type="text"
+                    <select
                         className="task-input"
-                        value={newTask}
-                        onChange={(e) => setNewTask(e.target.value)}
-                        placeholder="Enter task..."
-                    />
+                        value={selectedChore?.id || ''}
+                        onChange={(e) => {
+                            const choreId = parseInt(e.target.value);
+                            const chore = chores.find(c => c.id === choreId) || null;
+                            setSelectedChore(chore);
+                        }}
+                        required
+                    >
+                        <option value="">Select a chore...</option>
+                        {chores.map(chore => (
+                            <option key={chore.id} value={chore.id}>
+                                {chore.description}
+                            </option>
+                        ))}
+                    </select>
                     <div className="task-controls">
                         <div className="task-datetime-inputs">
                             <input
@@ -456,29 +638,34 @@ function App() {
                         </div>
                         <select
                             className="task-select"
-                            value={selectedAssignee.name}
-                            onChange={(e) => setSelectedAssignee(
-                                TEAM_MEMBERS.find(member => member.name === e.target.value) || TEAM_MEMBERS[0]
-                            )}
+                            value={selectedKid?.id || ''}
+                            onChange={(e) => {
+                                const kidId = parseInt(e.target.value);
+                                const kid = kids.find(k => k.id === kidId) || null;
+                                setSelectedKid(kid);
+                            }}
+                            required
                         >
-                            {TEAM_MEMBERS.map(member => (
-                                <option key={member.name} value={member.name}>
-                                    {member.name}
+                            <option value="">Select a kid...</option>
+                            {kids.map(kid => (
+                                <option key={kid.id} value={kid.id}>
+                                    {kid.first_name} {kid.last_name}
                                 </option>
                             ))}
                         </select>
                         <div className="recurrence-group">
                             <select
                                 className="task-select"
-                                value={recurrenceType}
+                                value={selectedChore?.frequency || recurrenceType}
                                 onChange={(e) => setRecurrenceType(e.target.value as RecurrencePattern['type'] | '')}
+                                disabled={selectedChore?.frequency ? true : false} // Disable if chore has a frequency
                             >
                                 <option value="">One-time</option>
                                 <option value="daily">Daily</option>
                                 <option value="weekly">Weekly</option>
                                 <option value="monthly">Monthly</option>
                             </select>
-                            {recurrenceType !== '' && (
+                            {(selectedChore?.frequency || recurrenceType !== '') && (
                                 <input
                                     type="number"
                                     min="1"
@@ -490,7 +677,11 @@ function App() {
                                 />
                             )}
                         </div>
-                        <button type="submit" className="task-button task-button-primary">
+                        <button 
+                            type="submit" 
+                            className="task-button task-button-primary"
+                            disabled={!selectedChore || !selectedKid}
+                        >
                             {isEditing ? 'Save' : 'Add'}
                         </button>
                     </div>
@@ -566,7 +757,7 @@ function App() {
                             <p>Are you sure you want to delete this task?</p>
                             <div className="delete-confirmation-buttons">
                                 <button
-                                    onClick={() => handleDeleteTask(deleteConfirmation.taskId)}
+                                    onClick={() => handleDeleteTask(deleteConfirmation.dateString, deleteConfirmation.taskId)}
                                     className="task-button task-button-danger"
                                 >
                                     Delete
@@ -584,6 +775,27 @@ function App() {
             </div>
         </div>
     );
+
+    // Add this function near the top of your App component
+    const checkSupabaseConnection = async () => {
+        try {
+            const { data, error } = await supabase.from('kids').select('count');
+            if (error) {
+                console.error("Supabase connection error:", error);
+                return false;
+            }
+            console.log("Supabase connection successful:", data);
+            return true;
+        } catch (err) {
+            console.error("Supabase connection exception:", err);
+            return false;
+        }
+    };
+
+    // Call this in a useEffect
+    useEffect(() => {
+        checkSupabaseConnection();
+    }, []);
 
     // Main app structure with routing
     return (
@@ -612,6 +824,9 @@ function App() {
                             
                             {/* Kid profile route with ID parameter */}
                             <Route path="/kid/profile/:id" element={<KidProfile />} />
+                            
+                            {/* Chores Manager route */}
+                            <Route path="/chores" element={<ChoresManager />} />
                             
                             {/* Default route redirect */}
                             <Route path="/" element={<Navigate to="/admin" />} />
