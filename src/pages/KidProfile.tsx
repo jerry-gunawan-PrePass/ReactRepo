@@ -81,8 +81,8 @@ const KidProfile = () => {
         } else if (item.chores && !Array.isArray(item.chores)) {
           // If chores is not an array but an object
           return {
-            id: item.chores.id,
-            description: item.chores.description,
+            id: (item.chores as { id: number }).id,
+            description: (item.chores as { description: string }).description,
             kid_chore_id: item.id,
             assigned_date: item.assigned_date,
             completed: item.completed
@@ -92,7 +92,8 @@ const KidProfile = () => {
       }).filter(Boolean); // Remove any null entries
       
       console.log('Formatted chores:', formattedChores);
-      setChores(formattedChores);
+      // Type assertion to ensure formattedChores matches the Chore[] type
+      setChores(formattedChores as Chore[]);
     } catch (error) {
       console.error('Error fetching kid chores:', error);
     }
