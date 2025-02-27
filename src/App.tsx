@@ -626,7 +626,10 @@ function App() {
                     <SideNav />
                     <div className="main-content">
                         <Routes>
+                            {/* Parent route with full functionality */}
                             <Route path="/admin" element={adminView} />
+                            
+                            {/* User route with limited functionality */}
                             <Route path="/user" element={
                                 <UserView 
                                     tasks={tasks}
@@ -637,32 +640,17 @@ function App() {
                                     onToggleTaskCompletion={toggleTaskCompletion}
                                 />
                             } />
+                            
+                            {/* Kid profile route */}
+                            <Route path="/kid/profile" element={<KidProfile />} />
+                            
+                            {/* Kid profile route with ID parameter */}
+                            <Route path="/kid/profile/:id" element={<KidProfile />} />
+                            
+                            {/* Default route redirect */}
                             <Route path="/" element={<Navigate to="/admin" />} />
                         </Routes>
                     </div>
-        <Router>
-            <div className="app-container">
-                <SideNav />
-                <div className="main-content">
-                    <Routes>
-                        {/* Admin route with full functionality */}
-                        <Route path="/admin" element={adminView} />
-                        {/* User route with limited functionality */}
-                        <Route path="/user" element={
-                            <UserView 
-                                tasks={tasks}
-                                selectedDate={selectedDate}
-                                TEAM_MEMBERS={TEAM_MEMBERS}
-                                onChangeMonth={changeMonth}
-                            />
-                        } />
-                        {/* Kid profile route */}
-                        <Route path="/kid/profile" element={<KidProfile />} />
-                        {/* Kid profile route with ID parameter */}
-                        <Route path="/kid/profile/:id" element={<KidProfile />} />
-                        {/* Default route redirect */}
-                        <Route path="/" element={<Navigate to="/admin" />} />
-                    </Routes>
                 </div>
             </Router>
         </ThemeProvider>
