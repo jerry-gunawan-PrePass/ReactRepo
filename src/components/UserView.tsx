@@ -1,25 +1,17 @@
 import React, { useState } from 'react';
 import { Task, TeamMember } from '../types';
+import MonthYearPicker from './MonthYearPicker';
 
 interface UserViewProps {
     tasks: Record<string, Task[]>;
     selectedDate: Date;
     TEAM_MEMBERS: TeamMember[];
     onChangeMonth: (offset: number) => void;  // For calendar navigation
+    closedTasks: Record<string, boolean>;  // Add this
+    onToggleTaskCompletion: (taskId: string) => void;  // Add this prop
 }
 
-const UserView = ({ tasks, selectedDate, TEAM_MEMBERS, onChangeMonth }: UserViewProps) => {
-    // Track local completion status (not synced with admin view)
-    const [localCompletions, setLocalCompletions] = useState<Record<string, boolean>>({});
-
-    // Toggle local completion without affecting main task state
-    const toggleLocalCompletion = (taskId: string) => {
-        setLocalCompletions(prev => ({
-            ...prev,
-            [taskId]: !prev[taskId]
-        }));
-    };
-
+const UserView = ({ tasks, selectedDate, TEAM_MEMBERS, onChangeMonth, closedTasks, onToggleTaskCompletion }: UserViewProps) => {
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
@@ -93,8 +85,22 @@ const UserView = ({ tasks, selectedDate, TEAM_MEMBERS, onChangeMonth }: UserView
         return now > taskDate;
     };
 
+    const handleMonthChange = (month: number) => {
+        const newDate = new Date(selectedDate.getFullYear(), month, 1);
+        const monthDiff = month - selectedDate.getMonth();
+        onChangeMonth(monthDiff);
+    };
+
+    const handleYearChange = (year: number) => {
+        const currentMonth = selectedDate.getMonth();
+        const newDate = new Date(year, currentMonth, 1);
+        const monthDiff = (year - selectedDate.getFullYear()) * 12;
+        onChangeMonth(monthDiff);
+    };
+
     return (
         <div className="max-w-6xl mx-auto">
+            <h1 className="text-3xl font-bold mb-6 text-center">Taskboard</h1>
             <div className="calendar-container">
                 <div className="calendar-header">
                     <button onClick={() => onChangeMonth(-1)} className="calendar-nav-button">&lt;</button>
@@ -123,22 +129,29 @@ const UserView = ({ tasks, selectedDate, TEAM_MEMBERS, onChangeMonth }: UserView
                     {getTasksForSelectedDate(selectedDate).map((task) => (
                         <div 
                             key={task.id} 
-                            className={`task-item ${task.completed ? 'completed' : ''} ${isTaskOverdue(task) ? 'overdue' : ''}`}
+                            className={`task-item 
+                                ${closedTasks[task.id] ? 'completed' : ''} 
+                                ${task.completed && !closedTasks[task.id] ? 'user-completed' : ''} 
+                                ${isTaskOverdue(task) ? 'overdue' : ''}`
+                            }
                             style={{ borderLeftColor: task.color }}
                         >
                             <div className="task-item-content">
                                 <div className="task-main">
                                     <div className="task-header-row">
-                                        <input
-                                            type="checkbox"
-                                            checked={task.completed || localCompletions[task.id] || false}
-                                            onChange={() => toggleLocalCompletion(task.id)}
-                                            className="task-checkbox"
-                                        />
-                                        <p className={`task-text ${task.completed ? 'completed-text' : ''}`}>
-                                            {task.text}
-                                        </p>
+                                        <label className="checkbox-label">
+                                            <input
+                                                type="checkbox"
+                                                checked={task.completed}
+                                                onChange={() => onToggleTaskCompletion(task.id)}
+                                                className="task-checkbox"
+                                            />
+                                            Complete
+                                        </label>
                                     </div>
+                                    <p className={`task-text ${task.completed ? 'completed-text' : ''} font-bold text-lg mt-2`}>
+                                        {task.text}
+                                    </p>
                                     <p className="task-meta">
                                         <span className="task-assignee">
                                             Assigned to: {task.assignedTo}

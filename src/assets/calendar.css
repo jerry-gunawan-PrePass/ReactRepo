@@ -578,13 +578,27 @@
     background-color: #60A5FA;
 }
 
-/* Task completion styles */
+/* Update task completion styles */
+.task-item.user-completed {
+    background-color: rgba(253, 224, 71, 0.2); /* Light yellow background */
+}
+
 .task-item.completed {
     background-color: rgba(16, 185, 129, 0.1); /* Light green background */
 }
 
-.task-item.overdue {
-    background-color: rgba(239, 68, 68, 0.1); /* Light red background */
+/* Add label styles */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.task-checkboxes {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
 }
 
 .task-checkbox {
@@ -764,4 +778,30 @@
 /* Dark mode adjustment */
 .dark .task-form-group {
     border-bottom-color: #374151;
+}
+
+.calendar-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    min-width: 120px;
+}
+
+.dark .calendar-select {
+    background-color: var(--background);
+    color: var(--foreground);
+}
+
+.calendar-select option {
+    background-color: var(--background);
+    color: var(--foreground);
+}
+
+.calendar-select:focus {
+    outline: none;
+    border-color: var(--ring);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }

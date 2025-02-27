@@ -1,24 +1,26 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
+import ThemeToggle from './ThemeToggle';
 
 const SideNav = () => {
-    const location = useLocation();
-    
     return (
         <nav className="sidenav">
             <div className="sidenav-content">
-                <Link 
+                <NavLink 
                     to="/admin" 
-                    className={`nav-item ${location.pathname === '/admin' ? 'active' : ''}`}
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 >
-                    Admin
-                </Link>
-                <Link 
+                    Admin View
+                </NavLink>
+                <NavLink 
                     to="/user" 
-                    className={`nav-item ${location.pathname === '/user' ? 'active' : ''}`}
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
                 >
-                    User
-                </Link>
+                    User View
+                </NavLink>
+                <div className="mt-auto pt-4 flex justify-center">
+                    <ThemeToggle />
+                </div>
             </div>
         </nav>
     );
