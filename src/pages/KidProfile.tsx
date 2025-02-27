@@ -22,7 +22,6 @@ const KidProfile = () => {
   const [chores, setChores] = useState<Chore[]>([]);
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -66,28 +65,54 @@ const KidProfile = () => {
 
       if (error) throw error;
       
-      // Transform the data to a more usable format
-      const formattedChores = data.map(item => ({
-        id: item.chores.id,
-        description: item.chores.description,
-        kid_chore_id: item.id,
-        assigned_date: item.assigned_date,
-        completed: item.completed
-      }));
+      console.log('Raw chores data:', data);
       
+      // Transform the data to a more usable format
+      const formattedChores = data.map(item => {
+        // Check if chores exists and has at least one item
+        if (item.chores && Array.isArray(item.chores) && item.chores.length > 0) {
+          return {
+            id: item.chores[0].id,
+            description: item.chores[0].description,
+            kid_chore_id: item.id,
+            assigned_date: item.assigned_date,
+            completed: item.completed
+          };
+        } else if (item.chores && !Array.isArray(item.chores)) {
+          // If chores is not an array but an object
+          return {
+            id: item.chores.id,
+            description: item.chores.description,
+            kid_chore_id: item.id,
+            assigned_date: item.assigned_date,
+            completed: item.completed
+          };
+        }
+        return null;
+      }).filter(Boolean); // Remove any null entries
+      
+      console.log('Formatted chores:', formattedChores);
       setChores(formattedChores);
     } catch (error) {
       console.error('Error fetching kid chores:', error);
     }
   }
 
-  async function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleAvatarClick() {
+    // Create a file input element
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.onchange = handleAvatarChange;
+    fileInput.click();
+  }
+
+  async function handleAvatarChange(event: any) {
     if (!event.target.files || event.target.files.length === 0) {
       return;
     }
     
     const file = event.target.files[0];
-    setAvatarFile(file);
     
     // Create a preview
     const reader = new FileReader();
@@ -97,47 +122,57 @@ const KidProfile = () => {
       }
     };
     reader.readAsDataURL(file);
+    
+    // Upload immediately
+    uploadAvatar(file);
   }
 
-  async function uploadAvatar() {
-    if (!avatarFile || !kid) return;
+  async function uploadAvatar(file: File) {
+    if (!kid) return;
     
     setUploading(true);
     
     try {
-      // Upload the file to Supabase Storage
-      const fileExt = avatarFile.name.split('.').pop();
-      const fileName = `${kid.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      // Instead of using the images table or a specific bucket,
+      // let's use a data URL approach which doesn't require storage
+      const reader = new FileReader();
       
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, avatarFile);
-        
-      if (uploadError) throw uploadError;
+      // Create a promise to handle the FileReader async operation
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            resolve(reader.result);
+          } else {
+            reject(new Error('Failed to convert file to data URL'));
+          }
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
       
-      // Get the public URL
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-        
-      // Update the kid's avatar_url in the database
+      // Update the kid's avatar_url in the database with the data URL
       const { error: updateError } = await supabase
         .from('kids')
-        .update({ avatar_url: data.publicUrl })
+        .update({ avatar_url: dataUrl })
         .eq('id', kid.id);
         
       if (updateError) throw updateError;
       
-      // Update the state
-      setAvatarUrl(data.publicUrl);
+      // Update the state with the data URL
+      setAvatarUrl(dataUrl);
+      
+      // Update the kid state to include the new avatar_url
+      setKid({
+        ...kid,
+        avatar_url: dataUrl
+      });
+      
       alert('Avatar updated successfully!');
     } catch (error) {
       console.error('Error uploading avatar:', error);
       alert('Error uploading avatar');
     } finally {
       setUploading(false);
-      setAvatarFile(null);
     }
   }
 
@@ -145,17 +180,48 @@ const KidProfile = () => {
     try {
       const now = new Date().toISOString();
       
+      // First, get the current chore to check last_completed status
+      const { data: choreData, error: fetchError } = await supabase
+        .from('kids_chores')
+        .select('last_completed')
+        .eq('id', choreId)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      // Update the chore completion status
       const { error } = await supabase
         .from('kids_chores')
         .update({ 
           completed: !completed,
-          last_completed: !completed ? now : null
+          // Only set last_completed when completing for the first time
+          // If unchecking, keep the existing last_completed value
+          last_completed: !completed && choreData.last_completed === null ? now : choreData.last_completed
         })
         .eq('id', choreId);
         
       if (error) throw error;
       
-      // Update the local state
+      // Award points only if:
+      // 1. The chore is being marked as completed (not uncompleted)
+      // 2. The chore was never completed before (last_completed was null)
+      if (!completed && choreData.last_completed === null && kid) {
+        // Update points in the database
+        const { error: pointsError } = await supabase
+          .from('kids')
+          .update({ points: kid.points + 1 })
+          .eq('id', kid.id);
+          
+        if (pointsError) throw pointsError;
+        
+        // Update local state for kid's points
+        setKid({
+          ...kid,
+          points: kid.points + 1
+        });
+      }
+      
+      // Update the local state for chores
       setChores(chores.map(chore => 
         chore.kid_chore_id === choreId 
           ? { ...chore, completed: !completed } 
@@ -179,7 +245,17 @@ const KidProfile = () => {
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="flex flex-col items-center">
-            <div className="relative w-32 h-32 mb-4">
+            <div 
+              className="relative cursor-pointer" 
+              style={{ width: '2in', height: '2in' }}
+              onClick={handleAvatarClick}
+            >
+              {uploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full z-10">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+                </div>
+              )}
+              
               {avatarUrl ? (
                 <img 
                   src={avatarUrl} 
@@ -187,33 +263,13 @@ const KidProfile = () => {
                   className="w-full h-full object-cover rounded-full border-4 border-blue-500"
                 />
               ) : (
-                <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center border-4 border-blue-500">
+                <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center border-4 border-blue-500 hover:bg-gray-300 transition">
                   <span className="text-3xl font-bold text-gray-500">
                     {kid.first_name.charAt(0)}{kid.last_name.charAt(0)}
                   </span>
                 </div>
               )}
             </div>
-            
-            <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">
-              Change Photo
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleAvatarChange} 
-                className="hidden" 
-              />
-            </label>
-            
-            {avatarFile && (
-              <button 
-                onClick={uploadAvatar}
-                disabled={uploading}
-                className="mt-2 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition disabled:bg-gray-400"
-              >
-                {uploading ? 'Uploading...' : 'Save Photo'}
-              </button>
-            )}
           </div>
           
           <div className="flex-1">

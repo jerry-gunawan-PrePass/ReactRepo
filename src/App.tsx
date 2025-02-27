@@ -595,6 +595,10 @@ function App() {
                                 onChangeMonth={changeMonth}
                             />
                         } />
+                        {/* Kid profile route */}
+                        <Route path="/kid/profile" element={<KidProfile />} />
+                        {/* Kid profile route with ID parameter */}
+                        <Route path="/kid/profile/:id" element={<KidProfile />} />
                         {/* Default route redirect */}
                         <Route path="/" element={<Navigate to="/admin" />} />
                     </Routes>
