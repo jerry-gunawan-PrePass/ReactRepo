@@ -441,8 +441,6 @@ function App() {
         setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + offset, 1));
     };
 
-
-
     // Render task indicator dots on calendar
     const renderTaskDots = (day: number) => {
         // Convert calendar day to ISO date string for comparison
@@ -581,8 +579,6 @@ function App() {
             }
         }
     };
-
-    // Send SMS notification using Twilio
 
     // Admin view component with full task management capabilities
     const adminView = (
@@ -761,7 +757,7 @@ function App() {
                             <p>Are you sure you want to delete this task?</p>
                             <div className="delete-confirmation-buttons">
                                 <button
-                                    onClick={() => handleDeleteTask('', deleteConfirmation.taskId)}
+                                    onClick={() => handleDeleteTask(deleteConfirmation.taskId)}
                                     className="task-button task-button-danger"
                                 >
                                     Delete
@@ -817,7 +813,6 @@ function App() {
                                 <UserView 
                                     tasks={tasks}
                                     selectedDate={selectedDate}
-                                    TEAM_MEMBERS={TEAM_MEMBERS}
                                     onChangeMonth={changeMonth}
                                     closedTasks={closedTasks}
                                     onToggleTaskCompletion={toggleTaskCompletion}

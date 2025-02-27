@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ThemeToggle from '../ThemeToggle';
 import { ThemeProvider } from '../../contexts/ThemeContext';
@@ -9,7 +8,8 @@ const localStorageMock = {
     setItem: jest.fn(),
     clear: jest.fn()
 };
-global.localStorage = localStorageMock as any;
+// Cast the mock functions to the correct Jest mock type
+global.localStorage = localStorageMock as unknown as Storage;
 
 // Mock matchMedia
 global.matchMedia = jest.fn().mockImplementation(query => ({
@@ -39,7 +39,7 @@ describe('ThemeToggle', () => {
     });
 
     it('shows sun icon in light mode', () => {
-        localStorage.getItem.mockReturnValue('light');
+        (localStorage.getItem as jest.Mock).mockReturnValue('light');
         render(
             <ThemeProvider>
                 <ThemeToggle />
@@ -49,7 +49,7 @@ describe('ThemeToggle', () => {
     });
 
     it('shows moon icon in dark mode', () => {
-        localStorage.getItem.mockReturnValue('dark');
+        (localStorage.getItem as jest.Mock).mockReturnValue('dark');
         render(
             <ThemeProvider>
                 <ThemeToggle />
@@ -59,7 +59,7 @@ describe('ThemeToggle', () => {
     });
 
     it('toggles theme when clicked', () => {
-        localStorage.getItem.mockReturnValue('light');
+        (localStorage.getItem as jest.Mock).mockReturnValue('light');
         render(
             <ThemeProvider>
                 <ThemeToggle />
