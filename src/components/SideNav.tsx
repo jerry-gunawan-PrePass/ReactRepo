@@ -1,36 +1,36 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
+import '../assets/sidenav.css';
 
-const SideNav = () => {
+const SideNav: React.FC = () => {
+    const location = useLocation();
+    
+    // Check if the current path matches the link
+    const isActive = (path: string) => {
+        return location.pathname === path;
+    };
+
     return (
-        <nav className="sidenav">
-            <div className="sidenav-content">
-                <NavLink 
-                    to="/admin" 
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    Admin View
-                </NavLink>
-                <NavLink 
-                    to="/user" 
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                >
-                    User View
-                </NavLink>
-                <div className="mt-auto pt-4 flex justify-center">
-                    <ThemeToggle />
-                </div>
-                    User
-                </Link>
-                <Link 
-                    to="/kid/profile" 
-                    className={`nav-item ${location.pathname === '/kid/profile' ? 'active' : ''}`}
-                >
-                    Dashboard
-                </Link>
+        <div className="sidenav">
+            <div className="sidenav-header">
+                <h2 className="sidenav-title">Taskboard</h2>
             </div>
-        </nav>
+            <nav className="sidenav-nav">
+                <Link to="/admin" className={`sidenav-link ${isActive('/admin') ? 'active' : ''}`}>
+                    Parent View
+                </Link>
+                <Link to="/user" className={`sidenav-link ${isActive('/user') ? 'active' : ''}`}>
+                    User View
+                </Link>
+                <Link to="/kid/profile" className={`sidenav-link ${isActive('/kid/profile') ? 'active' : ''}`}>
+                    Kid Profile
+                </Link>
+            </nav>
+            <div className="sidenav-footer">
+                <ThemeToggle />
+            </div>
+        </div>
     );
 };
 
