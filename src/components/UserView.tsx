@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
-import { Task, TeamMember } from '../types';
-import MonthYearPicker from './MonthYearPicker';
+interface Task {
+    id: string;
+    text: string;
+    dueDate: string;
+    dueTime: string;
+    color: string;
+    completed: boolean;
+    assignedTo: string;
+}
 
 interface UserViewProps {
     tasks: Record<string, Task[]>;
     selectedDate: Date;
-    TEAM_MEMBERS: TeamMember[];
     onChangeMonth: (offset: number) => void;  // For calendar navigation
     closedTasks: Record<string, boolean>;  // Add this
     onToggleTaskCompletion: (taskId: string) => void;  // Add this prop
 }
 
-const UserView = ({ tasks, selectedDate, TEAM_MEMBERS, onChangeMonth, closedTasks, onToggleTaskCompletion }: UserViewProps) => {
+const UserView = ({ tasks, selectedDate, onChangeMonth, closedTasks, onToggleTaskCompletion }: UserViewProps) => {
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
@@ -83,19 +88,6 @@ const UserView = ({ tasks, selectedDate, TEAM_MEMBERS, onChangeMonth, closedTask
         const now = new Date();
         const taskDate = new Date(`${task.dueDate}T${task.dueTime}`);
         return now > taskDate;
-    };
-
-    const handleMonthChange = (month: number) => {
-        const newDate = new Date(selectedDate.getFullYear(), month, 1);
-        const monthDiff = month - selectedDate.getMonth();
-        onChangeMonth(monthDiff);
-    };
-
-    const handleYearChange = (year: number) => {
-        const currentMonth = selectedDate.getMonth();
-        const newDate = new Date(year, currentMonth, 1);
-        const monthDiff = (year - selectedDate.getFullYear()) * 12;
-        onChangeMonth(monthDiff);
     };
 
     return (
