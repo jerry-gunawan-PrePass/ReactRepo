@@ -4,6 +4,7 @@ import './assets/calendar.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import SideNav from './components/SideNav';
 import UserView from './components/UserView';
+import KidProfile from "./pages/KidProfile";
 
 // Define interfaces for data structures
 interface TeamMember {
